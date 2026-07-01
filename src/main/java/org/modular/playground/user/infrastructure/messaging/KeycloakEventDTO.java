@@ -4,6 +4,7 @@ import jakarta.json.bind.annotation.JsonbProperty;
 import lombok.Data;
 
 @Data
+@io.quarkus.runtime.annotations.RegisterForReflection
 public class KeycloakEventDTO {
     
     @JsonbProperty("userId")
@@ -13,6 +14,7 @@ public class KeycloakEventDTO {
     private Details details;
 
     @Data
+    @io.quarkus.runtime.annotations.RegisterForReflection
     public static class Details {
         private String username;
         private String email;

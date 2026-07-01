@@ -8,6 +8,7 @@ import java.util.UUID;
 
 @Data
 @Builder
+@io.quarkus.runtime.annotations.RegisterForReflection
 public class UserResponseDTO {
     private UUID userId;
     private String firstName;

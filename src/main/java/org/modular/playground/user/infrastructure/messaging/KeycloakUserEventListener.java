@@ -3,7 +3,6 @@ package org.modular.playground.user.infrastructure.messaging;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.json.bind.Jsonb;
-import jakarta.json.bind.JsonbBuilder;
 
 import org.modular.playground.common.filters.TraceIdFilter;
 import org.modular.playground.user.core.domain.User;
@@ -31,6 +30,9 @@ public class KeycloakUserEventListener {
     UserMapper userMapper;
 
     @Inject
+    Jsonb jsonb;
+
+    @Inject
     @Channel("user-profile-created")
     Emitter<UserCreatedEvent> userCreatedEmitter;
 
@@ -40,7 +42,7 @@ public class KeycloakUserEventListener {
         String message = new String(event, StandardCharsets.UTF_8);
         LOGGER.infof("Received Keycloak user event: %s", message);
 
-        try (Jsonb jsonb = JsonbBuilder.create()) {
+        try {
             KeycloakEventDTO registrationEvent = jsonb.fromJson(message, KeycloakEventDTO.class);
 
             if (registrationEvent != null && registrationEvent.getDetails() != null) {
