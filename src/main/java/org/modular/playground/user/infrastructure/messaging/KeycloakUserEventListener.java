@@ -3,6 +3,7 @@ package org.modular.playground.user.infrastructure.messaging;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.json.bind.Jsonb;
+import io.smallrye.common.annotation.Blocking;
 
 import org.modular.playground.common.filters.TraceIdFilter;
 import org.modular.playground.user.core.domain.User;
@@ -10,6 +11,7 @@ import org.modular.playground.user.core.usecases.UserService;
 import org.modular.playground.user.infrastructure.persistence.postgres.mapper.UserMapper;
 import org.modular.playground.user.web.dto.UserCreatedEvent;
 import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Acknowledgment;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.jboss.logging.Logger;
@@ -17,6 +19,8 @@ import org.jboss.logging.MDC;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CompletableFuture;
 
 @ApplicationScoped
 public class KeycloakUserEventListener {
@@ -37,7 +41,9 @@ public class KeycloakUserEventListener {
     Emitter<UserCreatedEvent> userCreatedEmitter;
 
     @Incoming("registrations")
-    public void processUserEvent(byte[] event) {
+    @Acknowledgment(Acknowledgment.Strategy.POST_PROCESSING)
+    @Blocking
+    public CompletionStage<Void> processUserEvent(byte[] event) {
         MDC.put(TraceIdFilter.TRACE_ID_KEY, "event-" + UUID.randomUUID().toString());
         String message = new String(event, StandardCharsets.UTF_8);
         LOGGER.infof("Received Keycloak user event: %s", message);
@@ -61,13 +67,16 @@ public class KeycloakUserEventListener {
                         .build();
 
                 LOGGER.infof("User profile created for %s. Publishing event to RabbitMQ.", createdUser.getUsername());
-                userCreatedEmitter.send(createdEvent);
+                return userCreatedEmitter.send(createdEvent);
 
             } else {
                 LOGGER.warnf("Keycloak event details not found or failed to parse. Message: %s", message);
+                return CompletableFuture.failedFuture(
+                        new IllegalArgumentException("Registration event must contain details"));
             }
         } catch (Exception e) {
             LOGGER.errorf(e, "Error processing Keycloak event. Message: %s", message);
+            return CompletableFuture.failedFuture(e);
         } finally {
             MDC.remove(TraceIdFilter.TRACE_ID_KEY);
         }
