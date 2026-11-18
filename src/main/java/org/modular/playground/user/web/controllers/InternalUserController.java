@@ -1,6 +1,7 @@
 package org.modular.playground.user.web.controllers;
 
 import jakarta.inject.Inject;
+import jakarta.validation.constraints.*;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -37,7 +38,7 @@ public class InternalUserController {
     @POST
     @Path("/batch")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response getUsersByIds(List<UUID> userIds) {
+    public Response getUsersByIds(@NotNull @Size(max = 500) List<@NotNull UUID> userIds) {
         LOGGER.debugf("Internal batch lookup for %d users", userIds.size());
         List<UserResponseDTO> users = userService.findUsersByIds(userIds).stream()
                 .map(userMapper::toResponseDTO)
