@@ -1,6 +1,8 @@
 package org.modular.playground.user.infrastructure.messaging;
 
 import jakarta.json.bind.Jsonb;
+import org.jboss.logging.MDC;
+import org.modular.playground.common.filters.TraceIdFilter;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +42,29 @@ class KeycloakUserEventListenerCompletionTest {
         event.setDetails(new KeycloakEventDTO.Details());
         when(jsonb.fromJson(PAYLOAD, KeycloakEventDTO.class)).thenReturn(event);
         when(userMapper.toDomain(event)).thenReturn(user);
+    }
+
+    @Test
+    void keepsEventCorrelationSeparateFromTraceContext() {
+        arrangeValidEvent();
+        MDC.put(TraceIdFilter.TRACE_ID_KEY, "active-trace");
+        MDC.put(TraceIdFilter.SPAN_ID_KEY, "active-span");
+        when(userService.createUserProfile(user)).thenAnswer(invocation -> {
+            assertEquals("active-trace", MDC.get(TraceIdFilter.TRACE_ID_KEY));
+            assertEquals("active-span", MDC.get(TraceIdFilter.SPAN_ID_KEY));
+            assertNotNull(MDC.get(TraceIdFilter.EVENT_ID_KEY));
+            return user;
+        });
+        when(userCreatedEmitter.send(any(UserCreatedEvent.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+        try {
+            listener.processUserEvent(payload()).toCompletableFuture().join();
+            assertEquals("active-trace", MDC.get(TraceIdFilter.TRACE_ID_KEY));
+            assertEquals("active-span", MDC.get(TraceIdFilter.SPAN_ID_KEY));
+            assertNull(MDC.get(TraceIdFilter.EVENT_ID_KEY));
+        } finally {
+            MDC.clear();
+        }
     }
 
     @Test

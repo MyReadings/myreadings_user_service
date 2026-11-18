@@ -44,7 +44,7 @@ public class KeycloakUserEventListener {
     @Acknowledgment(Acknowledgment.Strategy.POST_PROCESSING)
     @Blocking
     public CompletionStage<Void> processUserEvent(byte[] event) {
-        MDC.put(TraceIdFilter.TRACE_ID_KEY, "event-" + UUID.randomUUID().toString());
+        MDC.put(TraceIdFilter.EVENT_ID_KEY, "event-" + UUID.randomUUID().toString());
         String message = new String(event, StandardCharsets.UTF_8);
         LOGGER.infof("Received Keycloak user event: %s", message);
 
@@ -78,7 +78,7 @@ public class KeycloakUserEventListener {
             LOGGER.errorf(e, "Error processing Keycloak event. Message: %s", message);
             return CompletableFuture.failedFuture(e);
         } finally {
-            MDC.remove(TraceIdFilter.TRACE_ID_KEY);
+            MDC.remove(TraceIdFilter.EVENT_ID_KEY);
         }
     }
 }
