@@ -1,6 +1,7 @@
 package org.modular.playground.user.web.controllers;
 
 import jakarta.inject.Inject;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.constraints.*;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 
 @Path("/api/internal/users")
 @Produces(MediaType.APPLICATION_JSON)
+@RolesAllowed({"user", "admin"})
 public class InternalUserController {
 
     private static final Logger LOGGER = Logger.getLogger(InternalUserController.class);
